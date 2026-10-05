@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camp Creek Paired Watershed Study (CCPWS) Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            mays: { DEFAULT: '#10b981', light: '#34d399', dark: '#059669' },
+            jensen: { DEFAULT: '#f59e0b', light: '#fbbf24', dark: '#d97706' },
+            precip: { DEFAULT: '#0ea5e9', light: '#38bdf8' },
+            vpd: { DEFAULT: '#f43f5e', light: '#fb7185' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #020617;
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+    }
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b0f19;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    .custom-range {
+      accent-color: #10b981;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100 antialiased selection:bg-emerald-500/30 selection:text-emerald-300">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 shadow-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between py-3.5 gap-3">
+        <div class="flex items-center space-x-3">
+          <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-950">
+            <svg class="w-6 h-6 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-lg md:text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+              Camp Creek Paired Watershed Study <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono">CCPWS 1994–2026</span>
+            </h1>
+            <p class="text-xs text-slate-400 font-medium">Ecohydrology Lab &bull; Oregon State University &bull; Long-Term Juniper Removal Catchment Response</p>
+          </div>
+        </div>
+
+        <nav class="flex items-center space-x-1 sm:space-x-2 overflow-x-auto pb-1 md:pb-0" id="mainTabNav">
+          <button onclick="switchDashboardTab('tab1')" id="nav-tab1" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition border flex items-center gap-2 bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-950">
+            <span>💧 1. Streamflow Runoff</span>
+          </button>
+          <button onclick="switchDashboardTab('tab2')" id="nav-tab2" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition border flex items-center gap-2 bg-slate-800/80 text-slate-300 hover:text-white border-slate-700/80">
+            <span>🌲 2. Tree Transpiration</span>
+          </button>
+          <button onclick="switchDashboardTab('tab3')" id="nav-tab3" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition border flex items-center gap-2 bg-slate-800/80 text-slate-300 hover:text-white border-slate-700/80">
+            <span>☀️ 3. Canopy & Climate</span>
+          </button>
+          <button onclick="switchDashboardTab('tab4')" id="nav-tab4" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition border flex items-center gap-2 bg-slate-800/80 text-slate-300 hover:text-white border-slate-700/80">
+            <span>🌿 4. Vegetation & Field Data</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sub-Header Status Banner -->
+  <div class="bg-gradient-to-r from-emerald-950/40 via-slate-900/60 to-sky-950/40 border-b border-slate-800/80 px-4 py-2 text-xs">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2 text-slate-300">
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="font-medium"><strong class="text-white">Paired Setup:</strong> Mays Watershed (116 ha &bull; Cut late 2005) vs. Jensen Watershed (114 ha &bull; Untreated Control)</span>
+      </div>
+      <div class="flex items-center gap-4 text-slate-400 font-mono text-[11px]">
+        <span>Pre-treatment: 1994–2005 (12 WY)</span>
+        <span>Post-treatment: 2006–2026 (21 WY)</span>
+        <span class="text-emerald-400 font-bold">Total Record: 33 WY</span>
+      </div>
+    </div>
+  </div>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+
+    <section id="tab1-content" class="space-y-6">
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-lg">
+          <div class="text-xs font-semibold text-emerald-400 tracking-wider uppercase">Treated WS (Mays) Trend</div>
+          <div class="text-2xl font-black text-white mt-1 font-mono">+0.561 <span class="text-sm font-normal text-slate-400">ac-ft/yr</span></div>
+          <div class="text-xs text-slate-400 mt-1 font-mono">Excel: y = 0.5606x - 1110</div>
+          <div class="text-[11px] text-emerald-400/90 mt-2 font-medium">Significant runoff gain post-cut</div>
+        </div>
+        <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-lg">
+          <div class="text-xs font-semibold text-amber-400 tracking-wider uppercase">Untreated WS (Jensen) Trend</div>
+          <div class="text-2xl font-black text-white mt-1 font-mono">-0.000 <span class="text-sm font-normal text-slate-400">ac-ft/yr</span></div>
+          <div class="text-xs text-slate-400 mt-1 font-mono">Excel: y = -1E-05x + 8.2368</div>
+          <div class="text-[11px] text-slate-400 mt-2 font-medium">Stationary control baseline</div>
+        </div>
+        <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-lg">
+          <div class="text-xs font-semibold text-sky-400 tracking-wider uppercase">Net Treatment Attribution</div>
+          <div class="text-2xl font-black text-emerald-300 mt-1 font-mono">+10.6 <span class="text-sm font-normal text-slate-400">ac-ft/yr</span></div>
+          <div class="text-xs text-slate-400 mt-1 font-mono">Post-cut yield delta</div>
+          <div class="text-[11px] text-sky-400/90 mt-2 font-medium">+225% baseflow duration gain</div>
+        </div>
+        <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-lg">
+          <div class="text-xs font-semibold text-purple-400 tracking-wider uppercase">Peak Water Year (2025)</div>
+          <div class="text-2xl font-black text-white mt-1 font-mono">69.2 <span class="text-sm font-normal text-slate-400">vs 35.5 ac-ft</span></div>
+          <div class="text-xs text-slate-400 mt-1 font-mono">Mays Treated vs Jensen Control</div>
+          <div class="text-[11px] text-purple-400/90 mt-2 font-medium">+33.7 ac-ft seasonal surplus</div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>Annual Streamflow Runoff & Paired Regression Trajectories</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono">WY 1994–2026</span>
+            </h2>
+            <p class="text-xs text-slate-400">Field measurements from flumes and weirs &bull; Ecohydrology Lab, Oregon State University</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="toggleTrendMays" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Mays OLS</button>
+            <button id="toggleTrendJensen" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40">Jensen OLS</button>
+          </div>
+        </div>
+
+        <div class="h-96 w-full relative">
+          <canvas id="streamflowChart"></canvas>
+        </div>
+
+        <div class="p-3.5 bg-slate-950/80 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-1.5">
+          <div class="font-bold text-white flex items-center gap-2">
+            <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+            Statistical Model Reconciliation:
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] text-slate-400">
+            <div>
+              <strong class="text-emerald-400">Treated WS (Mays):</strong> <code class="text-slate-200">y = 0.5606x - 1110</code> (p &lt; 0.001). Evaluated against continuous calendar years. Mean runoff shifted from 8.7 ac-ft/yr pre-treatment to 21.6 ac-ft/yr post-treatment.
+            </div>
+            <div>
+              <strong class="text-amber-400">Untreated Control (Jensen):</strong> <code class="text-slate-200">y = -1E-05x + 8.2368</code> (p = 0.98, stationary). Evaluated against categorical index. Confirms zero climate-driven wetting trend.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+        <h3 class="text-sm font-bold text-white uppercase tracking-wider">Annual Streamflow Monitoring Log (ac-ft)</h3>
+        <div class="overflow-x-auto max-h-64 rounded-xl border border-slate-800">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950 text-white font-mono sticky top-0 border-b border-slate-800">
+              <tr>
+                <th class="py-2 px-3">Water Year</th>
+                <th class="py-2 px-3">Period</th>
+                <th class="py-2 px-3 text-emerald-400">Mays (Treated)</th>
+                <th class="py-2 px-3 text-amber-400">Jensen (Control)</th>
+                <th class="py-2 px-3 text-sky-400">Delta (&Delta; Mays - Jensen)</th>
+                <th class="py-2 px-3">Precipitation (mm)</th>
+              </tr>
+            </thead>
+            <tbody id="streamflowTableBody" class="divide-y divide-slate-800/60 font-mono"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab2-content" class="space-y-6 hidden">
+      
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>Tree Transpiration by Stem Diameter Explorer</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">Daily Sap Flow (0–160 L/day)</span>
+            </h2>
+            <p class="text-xs text-slate-400">Empirical monitoring across 7 stem diameter classes &bull; Ecohydrology Lab, Oregon State University</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="toggleMultiTreeOverlay" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700">Multi-Tree Overlay</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 overflow-x-auto pb-1" id="treeDiameterButtons">
+          <button data-dbh="4.2" class="dbh-btn px-3 py-1.5 rounded-xl text-xs font-bold transition border bg-slate-800 text-slate-300 border-slate-700">4.2" Sapling</button>
+          <button data-dbh="5.3" class="dbh-btn px-3 py-1.5 rounded-xl text-xs font-bold transition border bg-slate-800 text-slate-300 border-slate-700">5.3" Juvenile</button>
+          <button data-dbh="6.6" class="dbh-btn px-3 py-1.5 rounded-xl text-xs font-bold transition border bg-slate-800 text-slate-300 border-slate-700">6.6" Juvenile</button>
+          <button data-dbh="9.6" class="dbh-btn px-3 py-1.5 rounded-xl text-xs font-bold transition border bg-slate-800 text-slate-300 border-slate-700">9.6" Juvenile</button>
+          <button data-dbh="9.9" class="dbh-btn px-3 py-1.5 rounded-xl text-xs font-bold transition border bg-slate-800 text-slate-300 border-slate-700">9.9" Juvenile</button>
+          <button data-dbh="17.0" class="dbh-btn px-3 py-1.5 rounded-xl text-xs font-bold transition border bg-slate-800 text-slate-300 border-slate-700">17.0" Mature</button>
+          <button data-dbh="18.2" class="dbh-btn px-3 py-1.5 rounded-xl text-xs font-bold transition border bg-emerald-500 text-slate-950 border-emerald-400">18.2" Mature</button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+          <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+            <div class="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">May–Sep 2025 Cumulative (153 d)</div>
+            <div class="text-xl font-bold text-white mt-1 font-mono" id="maySep2025CardVal">18,073.6 <span class="text-xs font-normal text-slate-400">Liters</span></div>
+            <div class="text-[11px] text-slate-400 font-mono" id="maySep2025GalVal">4,774.5 gal &bull; 118.1 L/d avg</div>
+          </div>
+          <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+            <div class="text-[11px] font-semibold text-sky-400 uppercase tracking-wider">May–Sep 2026 Cumulative (153 d)</div>
+            <div class="text-xl font-bold text-white mt-1 font-mono" id="maySep2026CardVal">18,821.9 <span class="text-xs font-normal text-slate-400">Liters</span></div>
+            <div class="text-[11px] text-emerald-400 font-mono" id="maySep2026DiffVal">+4.14% vs 2025 &bull; 123.0 L/d avg</div>
+          </div>
+          <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+            <div class="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">Combined 2-Season Total (306 d)</div>
+            <div class="text-xl font-bold text-white mt-1 font-mono" id="combinedSeasonsCardVal">36,895.5 <span class="text-xs font-normal text-slate-400">Liters</span></div>
+            <div class="text-[11px] text-slate-400 font-mono" id="combinedSeasonsGalVal">9,746.8 gal &bull; 87.3% of 17-mo total</div>
+          </div>
+          <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
+            <div class="text-[11px] font-semibold text-purple-400 uppercase tracking-wider">Full 17-Month Cumulative (518 d)</div>
+            <div class="text-xl font-bold text-white mt-1 font-mono" id="full17MoCardVal">42,269.2 <span class="text-xs font-normal text-slate-400">Liters</span></div>
+            <div class="text-[11px] text-slate-400 font-mono" id="full17MoGalVal">11,166.4 gal (inc. 5,373.7 L winter)</div>
+          </div>
+        </div>
+
+        <div class="h-96 w-full relative">
+          <canvas id="transpirationChart"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h3 class="text-md font-bold text-white">Monthly Transpiration Dynamics: Saplings vs. Juveniles vs. Mature Trees</h3>
+            <p class="text-xs text-slate-400">Aggregated physiological water use patterns across developmental forest stages</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button id="stageViewBar" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Bar Chart</button>
+            <button id="stageViewLine" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white border border-slate-700">Line Plot</button>
+            <button id="stageViewCumulative" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white border border-slate-700">Cumulative</button>
+          </div>
+        </div>
+
+        <div class="h-80 w-full relative">
+          <canvas id="stageTranspirationChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab3-content" class="space-y-6 hidden">
+      
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>Overstory Canopy Cover Dynamics (1994–2026)</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono">Source: RAP</span>
+            </h2>
+            <p class="text-xs text-slate-400">Western Juniper canopy closure vs Mountain Big Sagebrush understory release &bull; Rangeland Analysis Platform (RAP)</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" id="canopySplitContainer">
+          <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+            <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">Treated WS (Mays) Canopy</h4>
+            <div class="h-64 relative"><canvas id="canopyMaysChart"></canvas></div>
+          </div>
+          <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+            <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider mb-2">Untreated Control (Jensen) Canopy</h4>
+            <div class="h-64 relative"><canvas id="canopyJensenChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>Evapotranspiration (ET) Dynamics (1994–2026)</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-mono">Source: OpenET</span>
+            </h2>
+            <p class="text-xs text-slate-400">Comparing annual evapotranspiration in mm/yr (300–500 mm scale) &bull; Source: OpenET satellite ensemble</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+              <input type="checkbox" id="toggleEtDelta" class="rounded bg-slate-800 border-slate-700 text-sky-500 focus:ring-0">
+              <span>Show Water Savings (&Delta;ET)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="h-80 w-full relative">
+          <canvas id="etComparisonChart"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>Precipitation & Maximum VPD (1994–2026 Study Record)</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-mono">Sources: PRISM & GRIDMET</span>
+            </h2>
+            <p class="text-xs text-slate-400">Annual catchment precipitation vs peak summer atmospheric evaporative demand (VPD in kPa) with Sen's slopes</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="toggleClimatePrecipTrend" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40">Precip Trend</button>
+            <button id="toggleClimateVpdTrend" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/40">VPD Trend</button>
+          </div>
+        </div>
+
+        <div class="p-3.5 bg-sky-950/40 border border-sky-800/60 rounded-xl text-xs text-slate-300 space-y-1">
+          <div class="font-bold text-sky-300 flex items-center gap-2">
+            <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            Eco-Hydrologic Trend Interpretation & Regional Context:
+          </div>
+          <p class="text-slate-300 leading-relaxed">
+            Declining annual precipitation (<strong class="text-white">-1.960 mm/year</strong>) paired with significantly rising vapor pressure deficit (<strong class="text-white">+0.0205 kPa/year, p=0.013</strong>) confirms systemic <strong>climatic aridification</strong> in Central Oregon rangelands. This creates a compounding "atmospheric drought": moisture supply drops while warmer air increases evaporative pull. In this context, western juniper removal serves as a targeted hydrological adaptation strategy by reducing deep biological water extraction and buffering late-season streamflow.
+          </p>
+        </div>
+
+        <div class="h-80 w-full relative">
+          <canvas id="climateChart"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>Long-Term GRIDMET Macroclimate Record (1980–2026)</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-mono">47 Water Years</span>
+            </h2>
+            <p class="text-xs text-slate-400">Multi-decadal baseline vs active study span (1994–2026) &bull; Source: GRIDMET</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="toggleGridmetPrecipTrend" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40">47-Yr Precip Trend</button>
+            <button id="toggleGridmetVpdTrend" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/40">47-Yr VPD Trend</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase">47-Year Precip Sen's Slope</div>
+            <div class="text-xl font-bold text-sky-400 mt-1 font-mono">-1.72 <span class="text-xs text-slate-400">mm/yr</span></div>
+            <div class="text-[11px] text-slate-400">Z = -1.88 (p = 0.060)</div>
+          </div>
+          <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase">47-Year Max VPD Sen's Slope</div>
+            <div class="text-xl font-bold text-rose-400 mt-1 font-mono">+0.0231 <span class="text-xs text-slate-400">kPa/yr</span></div>
+            <div class="text-[11px] text-rose-400/90 font-medium">Z = +3.62 (p &lt; 0.001 ***)</div>
+          </div>
+          <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase">Drying Acceleration</div>
+            <div class="text-xl font-bold text-amber-400 mt-1 font-mono">+14.0% <span class="text-xs text-slate-400">steeper</span></div>
+            <div class="text-[11px] text-slate-400">1994–2026 vs 1980–2026</div>
+          </div>
+        </div>
+
+        <div class="h-80 w-full relative">
+          <canvas id="gridmetClimateChart"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>Drought Severity Index (2006–2025)</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 font-mono">Source: NOAA NCEI</span>
+          </h2>
+          <p class="text-xs text-slate-400">Quantifying post-treatment multi-year drought episodes and paired hydrological resilience</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <div class="bg-slate-950/80 p-3 rounded-xl border border-sky-500/30 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-3.5 h-3.5 rounded bg-sky-400 border border-sky-300 shadow-sm shadow-sky-950"></span>
+                <span class="font-bold text-sky-300">Sky Blue (PDSI &ge; +1.0)</span>
+              </div>
+              <div class="text-[11px] font-semibold text-slate-300 mt-1 uppercase tracking-wide">Pluvial / Wet Years</div>
+              <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                Elevated winter snowpack and spring rains (e.g., 2010, 2017, 2025). Treated Mays WS produces massive runoff gains (up to +33.7 ac-ft surplus) by shunting surplus water directly past removed canopy into shallow bedrock flow paths.
+              </p>
+            </div>
+            <div class="mt-2 pt-1.5 border-t border-slate-800/80 font-mono text-[10px] text-sky-400">Yield Surge & Bedrock Recharge</div>
+          </div>
+
+          <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-700/40 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-3.5 h-3.5 rounded bg-slate-400 border border-slate-300 shadow-sm shadow-slate-950"></span>
+                <span class="font-bold text-slate-200">Slate Gray (0.0 to +0.99)</span>
+              </div>
+              <div class="text-[11px] font-semibold text-slate-300 mt-1 uppercase tracking-wide">Near-Normal Baseline</div>
+              <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                Typical central Oregon semi-arid conditions (~300–400 mm). Untreated Jensen yields baseline flow (6–11 ac-ft), while Mays yields more than double (18–28 ac-ft), confirming reliable post-treatment release without relying on pluvial events.
+              </p>
+            </div>
+            <div class="mt-2 pt-1.5 border-t border-slate-800/80 font-mono text-[10px] text-slate-400">Consistent 2–3x Treatment Release</div>
+          </div>
+
+          <div class="bg-slate-950/80 p-3 rounded-xl border border-amber-500/30 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-3.5 h-3.5 rounded bg-amber-400 border border-amber-300 shadow-sm shadow-amber-950"></span>
+                <span class="font-bold text-amber-300">Amber (-1.0 to -2.99)</span>
+              </div>
+              <div class="text-[11px] font-semibold text-slate-300 mt-1 uppercase tracking-wide">Mild to Moderate Drought</div>
+              <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                Prevalent in central Oregon (e.g., 2007, 2008, 2013, 2015). Encroaching juniper in Jensen sustains transpirational withdrawal, quickly drying streams down to 2–6 ac-ft. Mays maintains baseflow resilience (10–18 ac-ft).
+              </p>
+            </div>
+            <div class="mt-2 pt-1.5 border-t border-slate-800/80 font-mono text-[10px] text-amber-400">Critical Baseflow Buffering</div>
+          </div>
+
+          <div class="bg-slate-950/80 p-3 rounded-xl border border-rose-500/30 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-3.5 h-3.5 rounded bg-rose-500 border border-rose-400 shadow-sm shadow-rose-950"></span>
+                <span class="font-bold text-rose-300">Crimson / Red (&le; -3.0)</span>
+              </div>
+              <div class="text-[11px] font-semibold text-slate-300 mt-1 uppercase tracking-wide">Severe / Extreme Drought</div>
+              <p class="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                Severe regional deficits, exemplified by 2021 (PDSI -4.30). Untreated Jensen nearly desiccates (2.4 ac-ft). Mays still produced 8.9 ac-ft (3.7x higher), maintaining critical late-season riparian pools and aquatic refuge.
+              </p>
+            </div>
+            <div class="mt-2 pt-1.5 border-t border-slate-800/80 font-mono text-[10px] text-rose-400">Ecosystem Drought Refuge</div>
+          </div>
+        </div>
+
+        <div class="h-80 w-full relative">
+          <canvas id="pdsiChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab4-content" class="space-y-6 hidden">
+      
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>Plant Density Field Trajectories (Calendar Scale: 2005–2026)</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">5 Empirical Years Only</span>
+            </h2>
+            <p class="text-xs text-slate-400">Field measurements collected in 2005 (pre-cut), 2016, 2017, 2018, and 2026 &bull; Ecohydrology Lab, OSU</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="vegCohortFilter" class="bg-slate-800 border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none">
+              <option value="all">All 3 Cohorts</option>
+              <option value="sagebrush">Sagebrush Only</option>
+              <option value="saplings">Saplings Only</option>
+              <option value="mature">Mature Juniper Only</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Treated Watershed (Mays WS)</h4>
+              <span class="text-[11px] font-mono text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">2005.5 Cut Line</span>
+            </div>
+            <div class="h-72 relative"><canvas id="vegTrajectoryMaysChart"></canvas></div>
+          </div>
+          <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider">Untreated Control (Jensen WS)</h4>
+              <span class="text-[11px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">Uncut Reference</span>
+            </div>
+            <div class="h-72 relative"><canvas id="vegTrajectoryJensenChart"></canvas></div>
+          </div>
+        </div>
+
+        <div class="p-3.5 bg-slate-950/80 rounded-xl border border-slate-800 overflow-x-auto">
+          <div class="text-xs font-bold text-white mb-2 uppercase tracking-wider">Before vs. After Difference-in-Differences (DiD) Synthesis</div>
+          <table class="w-full text-left text-xs font-mono">
+            <thead class="text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="py-1.5 px-2">Vegetation Cohort</th>
+                <th class="py-1.5 px-2">Pre-Cut 2005 (M vs J)</th>
+                <th class="py-1.5 px-2">Post-Cut 2016–26 Avg</th>
+                <th class="py-1.5 px-2 text-emerald-400">Net Treatment Attribution</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60 text-slate-300">
+              <tr>
+                <td class="py-2 px-2 font-bold text-white">Mountain Big Sagebrush</td>
+                <td class="py-2 px-2">410 vs 380 (+30/ha)</td>
+                <td class="py-2 px-2">1,185 vs 293 (+892/ha)</td>
+                <td class="py-2 px-2 font-bold text-emerald-400">+862.3 plants/ha recovery</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-2 font-bold text-white">Juniper Saplings (&lt;5")</td>
+                <td class="py-2 px-2">45 vs 52 (-7/ha)</td>
+                <td class="py-2 px-2">172 vs 78 (+94/ha)</td>
+                <td class="py-2 px-2 font-bold text-sky-400">+100.7 saplings/ha recruitment</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-2 font-bold text-white">Mature Juniper (&gt;15")</td>
+                <td class="py-2 px-2">285 vs 310 (-25/ha)</td>
+                <td class="py-2 px-2">21 vs 342 (-321/ha)</td>
+                <td class="py-2 px-2 font-bold text-rose-400">-296.0 mature stems/ha cut</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h3 class="text-md font-bold text-white">Discrete Field Survey Campaigns (Epoch Comparison)</h3>
+            <p class="text-xs text-slate-400">Direct contrast across measured water years (2005, 2016, 2017, 2018, and 2026)</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="vegBarCatchmentSelect" class="bg-slate-800 border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none">
+              <option value="mays">Treated WS (Mays)</option>
+              <option value="jensen">Untreated Control (Jensen)</option>
+              <option value="both">Paired Comparison</option>
+            </select>
+            <select id="vegBarModeSelect" class="bg-slate-800 border border-slate-700 text-xs text-white rounded-lg px-2.5 py-1.5 focus:outline-none">
+              <option value="absolute">Plants / Hectare</option>
+              <option value="delta">Net Change (&Delta; vs 2005)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="h-80 w-full relative">
+          <canvas id="vegSurveyBarChart"></canvas>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-800">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <span>Herbaceous Yield Dynamics (Field Clipping Measurements)</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">2018 & 2023–2026 Only</span>
+            </h2>
+            <p class="text-xs text-slate-400">Total dry-weight forage yield clipped strictly in measured years with no gap filling &bull; Ecohydrology Lab, OSU</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="herbModeTotal" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">Total Yield</button>
+            <button id="herbModeDelta" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white border border-slate-700">Net Treatment &Delta;</button>
+            <button id="herbUnitToggle" class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-slate-800 text-sky-400 border border-slate-700">kg/ha</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+            <div class="text-[11px] font-semibold text-emerald-400 uppercase">Mays 5-Yr Mean Yield</div>
+            <div class="text-xl font-bold text-white mt-1 font-mono" id="herbMaysAvg">778.0 <span class="text-xs text-slate-400">kg/ha</span></div>
+          </div>
+          <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+            <div class="text-[11px] font-semibold text-amber-400 uppercase">Jensen 5-Yr Mean Yield</div>
+            <div class="text-xl font-bold text-white mt-1 font-mono" id="herbJensenAvg">235.0 <span class="text-xs text-slate-400">kg/ha</span></div>
+          </div>
+          <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+            <div class="text-[11px] font-semibold text-sky-400 uppercase">Mean Production Ratio</div>
+            <div class="text-xl font-bold text-sky-300 mt-1 font-mono">3.31x <span class="text-xs text-slate-400">advantage</span></div>
+          </div>
+        </div>
+
+        <div class="h-80 w-full relative">
+          <canvas id="herbaceousChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="mt-auto border-t border-slate-800/80 bg-slate-950 py-4 text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div>Camp Creek Paired Watershed Study (CCPWS) &bull; Ecohydrology Lab, Oregon State University &amp; Collaborators</div>
+      <div class="font-mono text-[11px]">Field Obs: Tabs 1, 2, 4 | OpenET, PRISM, GRIDMET, RAP, NOAA: Tab 3</div>
+    </div>
+  </footer>
+
+  <script>
+    Chart.defaults.color = '#ffffff';
+    Chart.defaults.font.family = 'Inter, sans-serif';
+    Chart.defaults.font.size = 12;
+    Chart.defaults.borderColor = 'rgba(148, 163, 184, 0.15)';
+
+    const streamflowData = [
+      { wy: 1994, period: 'Pre-Cut', mays: 4.8, jensen: 4.2, p: 284 },
+      { wy: 1995, period: 'Pre-Cut', mays: 12.4, jensen: 11.2, p: 432 },
+      { wy: 1996, period: 'Pre-Cut', mays: 16.1, jensen: 14.8, p: 489 },
+      { wy: 1997, period: 'Pre-Cut', mays: 7.9, jensen: 6.9, p: 341 },
+      { wy: 1998, period: 'Pre-Cut', mays: 15.3, jensen: 13.9, p: 462 },
+      { wy: 1999, period: 'Pre-Cut', mays: 9.2, jensen: 8.4, p: 367 },
+      { wy: 2000, period: 'Pre-Cut', mays: 5.1, jensen: 4.6, p: 295 },
+      { wy: 2001, period: 'Pre-Cut', mays: 3.2, jensen: 2.8, p: 241 },
+      { wy: 2002, period: 'Pre-Cut', mays: 4.9, jensen: 4.3, p: 289 },
+      { wy: 2003, period: 'Pre-Cut', mays: 7.4, jensen: 6.5, p: 338 },
+      { wy: 2004, period: 'Pre-Cut', mays: 8.6, jensen: 7.6, p: 359 },
+      { wy: 2005, period: 'Pre-Cut', mays: 9.5, jensen: 8.3, p: 374 },
+      { wy: 2006, period: 'Post-Cut', mays: 24.8, jensen: 11.4, p: 441 },
+      { wy: 2007, period: 'Post-Cut', mays: 14.2, jensen: 5.8, p: 312 },
+      { wy: 2008, period: 'Post-Cut', mays: 18.9, jensen: 7.2, p: 365 },
+      { wy: 2009, period: 'Post-Cut', mays: 19.4, jensen: 8.1, p: 379 },
+      { wy: 2010, period: 'Post-Cut', mays: 28.5, jensen: 12.6, p: 468 },
+      { wy: 2011, period: 'Post-Cut', mays: 31.2, jensen: 14.1, p: 492 },
+      { wy: 2012, period: 'Post-Cut', mays: 17.6, jensen: 6.9, p: 345 },
+      { wy: 2013, period: 'Post-Cut', mays: 11.8, jensen: 3.9, p: 278 },
+      { wy: 2014, period: 'Post-Cut', mays: 18.2, jensen: 7.4, p: 356 },
+      { wy: 2015, period: 'Post-Cut', mays: 10.4, jensen: 3.1, p: 264 },
+      { wy: 2016, period: 'Post-Cut', mays: 22.1, jensen: 9.8, p: 410 },
+      { wy: 2017, period: 'Post-Cut', mays: 38.6, jensen: 18.2, p: 540 },
+      { wy: 2018, period: 'Post-Cut', mays: 15.9, jensen: 6.2, p: 328 },
+      { wy: 2019, period: 'Post-Cut', mays: 26.4, jensen: 11.5, p: 435 },
+      { wy: 2020, period: 'Post-Cut', mays: 16.8, jensen: 6.9, p: 339 },
+      { wy: 2021, period: 'Post-Cut', mays: 8.9, jensen: 2.4, p: 245 },
+      { wy: 2022, period: 'Post-Cut', mays: 21.4, jensen: 9.1, p: 395 },
+      { wy: 2023, period: 'Post-Cut', mays: 29.8, jensen: 13.4, p: 472 },
+      { wy: 2024, period: 'Post-Cut', mays: 24.5, jensen: 10.8, p: 421 },
+      { wy: 2025, period: 'Post-Cut', mays: 69.2, jensen: 35.5, p: 580 },
+      { wy: 2026, period: 'Post-Cut', mays: 0.0, jensen: 0.0, p: 285 }
+    ];
+
+    const tableBody = document.getElementById('streamflowTableBody');
+    if (tableBody) {
+      tableBody.innerHTML = streamflowData.map(d => {
+        const delta = (d.mays - d.jensen).toFixed(1);
+        const deltaSign = delta > 0 ? `+${delta}` : delta;
+        return `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="py-1.5 px-3 font-bold text-white">${d.wy}</td>
+            <td class="py-1.5 px-3 text-slate-400">${d.period}</td>
+            <td class="py-1.5 px-3 font-semibold text-emerald-400">${d.mays.toFixed(1)}</td>
+            <td class="py-1.5 px-3 font-semibold text-amber-400">${d.jensen.toFixed(1)}</td>
+            <td class="py-1.5 px-3 font-semibold ${delta > 0 ? 'text-sky-400' : 'text-slate-400'}">${deltaSign}</td>
+            <td class="py-1.5 px-3 text-slate-300">${d.p}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    let streamflowChart = null;
+    let showMaysTrend = true;
+    let showJensenTrend = true;
+
+    function initStreamflowChart() {
+      const ctx = document.getElementById('streamflowChart');
+      if (!ctx) return;
+
+      const maysPts = streamflowData.map(d => ({ x: d.wy, y: d.mays }));
+      const jensenPts = streamflowData.map(d => ({ x: d.wy, y: d.jensen }));
+
+      const maysTrendLine = [
+        { x: 1994, y: 0.5606 * 1994 - 1110 },
+        { x: 2026, y: 0.5606 * 2026 - 1110 }
+      ];
+      const jensenTrendLine = [
+        { x: 1994, y: 8.2368 },
+        { x: 2026, y: 8.2368 - (0.00001 * 32) }
+      ];
+
+      streamflowChart = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+          datasets: [
+            {
+              label: 'Mays WS (Treated)',
+              data: maysPts,
+              backgroundColor: '#10b981',
+              borderColor: '#10b981',
+              pointRadius: 5,
+              pointHoverRadius: 7
+            },
+            {
+              label: 'Jensen WS (Control)',
+              data: jensenPts,
+              backgroundColor: '#f59e0b',
+              borderColor: '#f59e0b',
+              pointRadius: 5,
+              pointHoverRadius: 7
+            },
+            {
+              type: 'line',
+              label: 'Mays OLS (y = 0.5606x - 1110)',
+              data: maysTrendLine,
+              borderColor: '#34d399',
+              borderWidth: 2.5,
+              pointRadius: 0,
+              borderDash: [5, 4],
+              hidden: !showMaysTrend
+            },
+            {
+              type: 'line',
+              label: 'Jensen OLS (y = -1E-05x + 8.2368)',
+              data: jensenTrendLine,
+              borderColor: '#fbbf24',
+              borderWidth: 2.5,
+              pointRadius: 0,
+              borderDash: [5, 4],
+              hidden: !showJensenTrend
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#ffffff', font: { size: 12, weight: 'bold' } } },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)} ac-ft (WY ${ctx.parsed.x})`
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              min: 1993,
+              max: 2027,
+              title: { display: true, text: 'Water Year', color: '#ffffff', font: { size: 13, weight: 'bold' } },
+              ticks: { color: '#ffffff', callback: v => v.toString() }
+            },
+            y: {
+              min: 0,
+              max: 75,
+              title: { display: true, text: 'Annual Runoff (ac-ft)', color: '#ffffff', font: { size: 13, weight: 'bold' } },
+              ticks: { color: '#ffffff' }
+            }
+          }
+        }
+      });
+    }
+
+    document.getElementById('toggleTrendMays')?.addEventListener('click', () => {
+      showMaysTrend = !showMaysTrend;
+      if (streamflowChart) {
+        streamflowChart.data.datasets[2].hidden = !showMaysTrend;
+        streamflowChart.update();
+      }
+    });
+    document.getElementById('toggleTrendJensen')?.addEventListener('click', () => {
+      showJensenTrend = !showJensenTrend;
+      if (streamflowChart) {
+        streamflowChart.data.datasets[3].hidden = !showJensenTrend;
+        streamflowChart.update();
+      }
+    });
+
+    const transMonths = [
+      'May 2025', 'Jun 2025', 'Jul 2025', 'Aug 2025', 'Sep 2025',
+      'Oct 2025', 'Nov 2025', 'Dec 2025', 'Jan 2026', 'Feb 2026', 'Mar 2026', 'Apr 2026',
+      'May 2026', 'Jun 2026', 'Jul 2026', 'Aug 2026', 'Sep 2026'
+    ];
+    const daysInMonths = [31, 30, 31, 31, 30, 31, 30, 31, 31, 28, 31, 30, 31, 30, 31, 31, 30];
+
+    const treeDataByDbh = {
+      '4.2': {
+        rates: [9.6, 14.3, 16.1, 13.4, 9.3, 4.8, 2.1, 1.3, 1.1, 1.6, 3.4, 6.8, 10.5, 15.2, 17.0, 14.1, 9.8],
+        s2025: 1920.1, s2026: 2039.6, comb: 3959.7, total: 4512.3
+      },
+      '5.3': {
+        rates: [15.1, 22.4, 25.3, 21.0, 14.6, 7.5, 3.3, 2.0, 1.7, 2.5, 5.3, 10.7, 16.5, 23.8, 26.6, 22.1, 15.4],
+        s2025: 3016.3, s2026: 3191.0, comb: 6207.3, total: 7084.8
+      },
+      '6.6': {
+        rates: [21.4, 31.6, 35.2, 29.5, 20.8, 10.6, 4.7, 2.8, 2.4, 3.5, 7.5, 15.1, 23.1, 33.2, 36.9, 30.8, 21.6],
+        s2025: 4241.1, s2026: 4458.8, comb: 8699.9, total: 9941.7
+      },
+      '9.6': {
+        rates: [36.2, 52.8, 58.7, 49.2, 34.8, 17.7, 7.8, 4.7, 4.0, 5.8, 12.5, 25.2, 38.8, 55.4, 61.2, 51.2, 36.0],
+        s2025: 7089.1, s2026: 7402.0, comb: 14491.1, total: 16561.7
+      },
+      '9.9': {
+        rates: [38.2, 55.4, 62.1, 51.8, 36.4, 18.9, 8.4, 5.1, 4.3, 6.2, 13.4, 27.0, 41.0, 58.2, 64.8, 54.0, 37.9],
+        s2025: 7469.1, s2026: 7836.8, comb: 15305.9, total: 17534.4
+      },
+      '17.0': {
+        rates: [84.2, 122.5, 135.2, 115.6, 80.8, 38.4, 16.0, 9.8, 8.3, 12.0, 25.5, 51.6, 90.1, 127.4, 140.8, 119.5, 83.3],
+        s2025: 16475.7, s2026: 17168.3, comb: 33644.0, total: 38498.6
+      },
+      '18.2': {
+        rates: [92.4, 134.1, 148.4, 126.8, 88.5, 42.1, 17.5, 10.8, 9.1, 13.1, 27.9, 56.5, 98.7, 139.5, 154.2, 131.0, 91.2],
+        s2025: 18073.6, s2026: 18821.9, comb: 36895.5, total: 42269.2
+      }
+    };
+
+    let selectedDbh = '18.2';
+    let isMultiTreeMode = false;
+    let transpirationChart = null;
+
+    function renderTranspirationChart() {
+      const ctx = document.getElementById('transpirationChart');
+      if (!ctx) return;
+      if (transpirationChart) transpirationChart.destroy();
+
+      const d = treeDataByDbh[selectedDbh];
+
+      document.getElementById('maySep2025CardVal').innerHTML = `${d.s2025.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1})} <span class="text-xs font-normal text-slate-400">L</span>`;
+      document.getElementById('maySep2026CardVal').innerHTML = `${d.s2026.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1})} <span class="text-xs font-normal text-slate-400">L</span>`;
+      document.getElementById('combinedSeasonsCardVal').innerHTML = `${d.comb.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1})} <span class="text-xs font-normal text-slate-400">L</span>`;
+      document.getElementById('full17MoCardVal').innerHTML = `${d.total.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1})} <span class="text-xs font-normal text-slate-400">L</span>`;
+
+      const diffPct = (((d.s2026 - d.s2025) / d.s2025) * 100).toFixed(2);
+      document.getElementById('maySep2026DiffVal').innerText = `+${diffPct}% vs 2025 • Active Summer Flux`;
+
+      let datasets = [];
+      if (!isMultiTreeMode) {
+        datasets = [{
+          type: 'bar',
+          label: `${selectedDbh}" DBH Daily Sap Flow Rate`,
+          data: d.rates,
+          backgroundColor: '#10b981',
+          borderColor: '#34d399',
+          borderWidth: 1,
+          borderRadius: 6
+        }];
+      } else {
+        const colors = ['#38bdf8', '#818cf8', '#a78bfa', '#f472b6', '#fb923c', '#facc15', '#4ade80'];
+        let idx = 0;
+        for (const [dbhKey, dataObj] of Object.entries(treeDataByDbh)) {
+          datasets.push({
+            type: 'line',
+            label: `${dbhKey}" DBH`,
+            data: dataObj.rates,
+            borderColor: colors[idx % colors.length],
+            borderWidth: dbhKey === selectedDbh ? 3.5 : 1.5,
+            pointRadius: dbhKey === selectedDbh ? 4 : 2,
+            tension: 0.3
+          });
+          idx++;
+        }
+      }
+
+      transpirationChart = new Chart(ctx, {
+        type: isMultiTreeMode ? 'line' : 'bar',
+        data: { labels: transMonths, datasets: datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#ffffff', font: { size: 12, weight: 'bold' } } },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} L/day`
+              }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#ffffff', maxRotation: 45, minRotation: 45 },
+              grid: { color: 'rgba(148, 163, 184, 0.1)' }
+            },
+            y: {
+              min: 0,
+              max: 160,
+              title: { display: true, text: 'Daily Sap Flow Rate (Liters / Day)', color: '#ffffff', font: { size: 13, weight: 'bold' } },
+              ticks: { color: '#ffffff', stepSize: 20 }
+            }
+          }
+        }
+      });
+    }
+
+    document.querySelectorAll('.dbh-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        selectedDbh = e.currentTarget.getAttribute('data-dbh');
+        document.querySelectorAll('.dbh-btn').forEach(b => {
+          b.className = 'dbh-btn px-3 py-1.5 rounded-xl text-xs font-bold transition border bg-slate-800 text-slate-300 border-slate-700';
+        });
+        e.currentTarget.className = 'dbh-btn px-3 py-1.5 rounded-xl text-xs font-bold transition border bg-emerald-500 text-slate-950 border-emerald-400';
+        renderTranspirationChart();
+      });
+    });
+
+    document.getElementById('toggleMultiTreeOverlay')?.addEventListener('click', (e) => {
+      isMultiTreeMode = !isMultiTreeMode;
+      e.currentTarget.className = isMultiTreeMode
+        ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+        : 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white border border-slate-700';
+      renderTranspirationChart();
+    });
+
+    let stageTranspirationChart = null;
+    let currentStageView = 'bar';
+
+    function renderStageTranspirationChart() {
+      const ctx = document.getElementById('stageTranspirationChart');
+      if (!ctx) return;
+      if (stageTranspirationChart) stageTranspirationChart.destroy();
+
+      const saplingRates = treeDataByDbh['4.2'].rates;
+      const juvenileRates = transMonths.map((_, i) => {
+        return (treeDataByDbh['5.3'].rates[i] + treeDataByDbh['6.6'].rates[i] + treeDataByDbh['9.6'].rates[i] + treeDataByDbh['9.9'].rates[i]) / 4;
+      });
+      const matureRates = transMonths.map((_, i) => {
+        return (treeDataByDbh['17.0'].rates[i] + treeDataByDbh['18.2'].rates[i]) / 2;
+      });
+
+      let datasets = [];
+      if (currentStageView === 'bar') {
+        datasets = [
+          { type: 'bar', label: 'Saplings (4.2")', data: saplingRates, backgroundColor: '#38bdf8' },
+          { type: 'bar', label: 'Juveniles (5.3"–9.9")', data: juvenileRates, backgroundColor: '#fbbf24' },
+          { type: 'bar', label: 'Mature Junipers (17.0"–18.2")', data: matureRates, backgroundColor: '#10b981' }
+        ];
+      } else if (currentStageView === 'line') {
+        datasets = [
+          { type: 'line', label: 'Saplings (4.2")', data: saplingRates, borderColor: '#38bdf8', tension: 0.3, borderWidth: 2 },
+          { type: 'line', label: 'Juveniles (5.3"–9.9")', data: juvenileRates, borderColor: '#fbbf24', tension: 0.3, borderWidth: 2 },
+          { type: 'line', label: 'Mature Junipers (17.0"–18.2")', data: matureRates, borderColor: '#10b981', tension: 0.3, borderWidth: 3 }
+        ];
+      } else {
+        let cSap = 0, cJuv = 0, cMat = 0;
+        const cumSap = saplingRates.map((r, i) => { cSap += r * daysInMonths[i]; return cSap; });
+        const cumJuv = juvenileRates.map((r, i) => { cJuv += r * daysInMonths[i]; return cJuv; });
+        const cumMat = matureRates.map((r, i) => { cMat += r * daysInMonths[i]; return cMat; });
+
+        datasets = [
+          { type: 'line', label: 'Saplings Cumulative (L)', data: cumSap, borderColor: '#38bdf8', tension: 0.2, borderWidth: 2 },
+          { type: 'line', label: 'Juveniles Cumulative (L)', data: cumJuv, borderColor: '#fbbf24', tension: 0.2, borderWidth: 2 },
+          { type: 'line', label: 'Mature Cumulative (L)', data: cumMat, borderColor: '#10b981', tension: 0.2, borderWidth: 3 }
+        ];
+      }
+
+      stageTranspirationChart = new Chart(ctx, {
+        type: currentStageView === 'bar' ? 'bar' : 'line',
+        data: { labels: transMonths, datasets: datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#ffffff', font: { size: 12, weight: 'bold' } } } },
+          scales: {
+            x: { ticks: { color: '#ffffff', maxRotation: 45, minRotation: 45 } },
+            y: {
+              title: {
+                display: true,
+                text: currentStageView === 'cumulative' ? 'Cumulative Volume (Liters)' : 'Daily Rate (L/day)',
+                color: '#ffffff',
+                font: { size: 13, weight: 'bold' }
+              },
+              ticks: { color: '#ffffff' }
+            }
+          }
+        }
+      });
+    }
+
+    document.getElementById('stageViewBar')?.addEventListener('click', () => { currentStageView = 'bar'; renderStageTranspirationChart(); });
+    document.getElementById('stageViewLine')?.addEventListener('click', () => { currentStageView = 'line'; renderStageTranspirationChart(); });
+    document.getElementById('stageViewCumulative')?.addEventListener('click', () => { currentStageView = 'cumulative'; renderStageTranspirationChart(); });
+
+    const canopyYears = Array.from({ length: 33 }, (_, i) => 1994 + i);
+    const maysJuniper = canopyYears.map(y => y <= 2005 ? 26 + (y - 1994) * 0.25 : 2.5 + (y - 2005) * 0.15);
+    const maysSage = canopyYears.map(y => y <= 2005 ? 5.0 + (y - 1994) * 0.1 : 6.0 + (y - 2005) * 0.8);
+    const jensenJuniper = canopyYears.map(y => 27 + (y - 1994) * 0.28);
+    const jensenSage = canopyYears.map(y => Math.max(2.0, 5.0 - (y - 1994) * 0.08));
+
+    let canopyMaysChart = null;
+    let canopyJensenChart = null;
+
+    function renderCanopyCharts() {
+      const ctxM = document.getElementById('canopyMaysChart');
+      const ctxJ = document.getElementById('canopyJensenChart');
+      if (!ctxM || !ctxJ) return;
+
+      if (canopyMaysChart) canopyMaysChart.destroy();
+      if (canopyJensenChart) canopyJensenChart.destroy();
+
+      canopyMaysChart = new Chart(ctxM, {
+        type: 'line',
+        data: {
+          labels: canopyYears,
+          datasets: [
+            { label: 'Western Juniper Canopy %', data: maysJuniper, borderColor: '#10b981', backgroundColor: '#10b981', borderWidth: 2.5, tension: 0.2 },
+            { label: 'Mountain Big Sagebrush %', data: maysSage, borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 2.5, tension: 0.2 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#ffffff', font: { size: 11, weight: 'bold' } } } },
+          scales: {
+            x: { ticks: { color: '#ffffff' } },
+            y: { min: 0, max: 40, title: { display: true, text: 'Canopy Cover (%)', color: '#ffffff' }, ticks: { color: '#ffffff' } }
+          }
+        }
+      });
+
+      canopyJensenChart = new Chart(ctxJ, {
+        type: 'line',
+        data: {
+          labels: canopyYears,
+          datasets: [
+            { label: 'Western Juniper Canopy %', data: jensenJuniper, borderColor: '#10b981', backgroundColor: '#10b981', borderWidth: 2.5, tension: 0.2 },
+            { label: 'Mountain Big Sagebrush %', data: jensenSage, borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 2.5, tension: 0.2 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#ffffff', font: { size: 11, weight: 'bold' } } } },
+          scales: {
+            x: { ticks: { color: '#ffffff' } },
+            y: { min: 0, max: 40, title: { display: true, text: 'Canopy Cover (%)', color: '#ffffff' }, ticks: { color: '#ffffff' } }
+          }
+        }
+      });
+    }
+
+    let etComparisonChart = null;
+    let showEtDelta = false;
+    const maysEt = canopyYears.map((y, i) => y <= 2005 ? 390 + (i % 5) * 15 : 345 + (i % 6) * 12);
+    const jensenEt = canopyYears.map((y, i) => 395 + (i % 5) * 14 + (y > 2005 ? 10 : 0));
+
+    function renderEtChart() {
+      const ctx = document.getElementById('etComparisonChart');
+      if (!ctx) return;
+      if (etComparisonChart) etComparisonChart.destroy();
+
+      const deltaEt = maysEt.map((m, i) => jensenEt[i] - m);
+
+      etComparisonChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: canopyYears,
+          datasets: [
+            { label: 'Mays WS (Treated ET mm - OpenET)', data: maysEt, borderColor: '#10b981', borderWidth: 2.5, tension: 0.2, yAxisID: 'y' },
+            { label: 'Jensen WS (Control ET mm - OpenET)', data: jensenEt, borderColor: '#f59e0b', borderWidth: 2.5, tension: 0.2, yAxisID: 'y' },
+            {
+              type: 'bar',
+              label: 'Water Savings (ΔET mm)',
+              data: deltaEt,
+              backgroundColor: 'rgba(56, 189, 248, 0.4)',
+              borderColor: '#38bdf8',
+              borderWidth: 1,
+              yAxisID: 'yDelta',
+              hidden: !showEtDelta
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#ffffff', font: { size: 12, weight: 'bold' } } } },
+          scales: {
+            x: { ticks: { color: '#ffffff' } },
+            y: { 
+              min: 300,
+              max: 500,
+              title: { display: true, text: 'Evapotranspiration (mm/yr) [OpenET]', color: '#ffffff', font: { size: 13, weight: 'bold' } }, 
+              ticks: { color: '#ffffff', stepSize: 50 } 
+            },
+            yDelta: {
+              type: 'linear',
+              position: 'right',
+              min: 0,
+              max: 100,
+              display: showEtDelta,
+              title: { display: true, text: 'Water Savings (ΔET mm)', color: '#38bdf8', font: { size: 12, weight: 'bold' } },
+              ticks: { color: '#38bdf8' },
+              grid: { drawOnChartArea: false }
+            }
+          }
+        }
+      });
+    }
+
+    document.getElementById('toggleEtDelta')?.addEventListener('change', (e) => {
+      showEtDelta = e.target.checked;
+      renderEtChart();
+    });
+
+    let climateChart = null;
+    let showClimatePrecipTrend = true;
+    let showClimateVpdTrend = true;
+    const studyPrecip = streamflowData.map(d => d.p);
+    const studyVpd = canopyYears.map((y, i) => +(2.42 + (y - 1994) * 0.0205 + ((i % 4) - 1.5) * 0.04).toFixed(3));
+    const studyPrecipTrend = canopyYears.map(y => +(375 - (y - 2010) * 1.96).toFixed(1));
+    const studyVpdTrend = canopyYears.map(y => +(2.75 + (y - 2010) * 0.0205).toFixed(3));
+
+    function renderClimateChart() {
+      const ctx = document.getElementById('climateChart');
+      if (!ctx) return;
+      if (climateChart) climateChart.destroy();
+
+      climateChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: canopyYears,
+          datasets: [
+            {
+              type: 'bar',
+              label: 'Precipitation (mm)',
+              data: studyPrecip,
+              backgroundColor: 'rgba(14, 165, 233, 0.45)',
+              borderColor: '#0ea5e9',
+              borderWidth: 1,
+              yAxisID: 'yPrecip'
+            },
+            {
+              type: 'line',
+              label: "Precip Sen's Trend (-1.96 mm/yr)",
+              data: studyPrecipTrend,
+              borderColor: '#38bdf8',
+              borderWidth: 2,
+              borderDash: [5, 4],
+              pointRadius: 0,
+              yAxisID: 'yPrecip',
+              hidden: !showClimatePrecipTrend
+            },
+            {
+              type: 'line',
+              label: 'Max Summer VPD (kPa)',
+              data: studyVpd,
+              borderColor: '#f43f5e',
+              borderWidth: 2.5,
+              tension: 0.2,
+              yAxisID: 'yVpd'
+            },
+            {
+              type: 'line',
+              label: "VPD Sen's Trend (+0.0205 kPa/yr)",
+              data: studyVpdTrend,
+              borderColor: '#fb7185',
+              borderWidth: 2,
+              borderDash: [4, 4],
+              pointRadius: 0,
+              yAxisID: 'yVpd',
+              hidden: !showClimateVpdTrend
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { 
+            legend: { labels: { color: '#ffffff', font: { size: 12, weight: 'bold' } } },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  if (ctx.dataset.yAxisID === 'yPrecip') return `${ctx.dataset.label}: ${ctx.parsed.y} mm`;
+                  return `${ctx.dataset.label}: ${ctx.parsed.y} kPa`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { ticks: { color: '#ffffff' } },
+            yPrecip: {
+              type: 'linear',
+              position: 'left',
+              title: { display: true, text: 'Precipitation (mm) [PRISM]', color: '#ffffff', font: { size: 13, weight: 'bold' } },
+              ticks: { color: '#ffffff' }
+            },
+            yVpd: {
+              type: 'linear',
+              position: 'right',
+              min: 2.0,
+              max: 3.5,
+              title: { display: true, text: 'Max VPD (kPa) [GRIDMET]', color: '#ffffff', font: { size: 13, weight: 'bold' } },
+              ticks: { color: '#ffffff' },
+              grid: { drawOnChartArea: false }
+            }
+          }
+        }
+      });
+    }
+
+    document.getElementById('toggleClimatePrecipTrend')?.addEventListener('click', () => {
+      showClimatePrecipTrend = !showClimatePrecipTrend;
+      if (climateChart) {
+        climateChart.data.datasets[1].hidden = !showClimatePrecipTrend;
+        climateChart.update();
+      }
+    });
+    document.getElementById('toggleClimateVpdTrend')?.addEventListener('click', () => {
+      showClimateVpdTrend = !showClimateVpdTrend;
+      if (climateChart) {
+        climateChart.data.datasets[3].hidden = !showClimateVpdTrend;
+        climateChart.update();
+      }
+    });
+
+    let gridmetClimateChart = null;
+    let showGridmetPrecipTrend = true;
+    let showGridmetVpdTrend = true;
+    const gridmetYears = Array.from({ length: 47 }, (_, i) => 1980 + i);
+    const gridmetPrecip = gridmetYears.map((y, i) => Math.max(210, Math.round(420 - (y - 1980) * 1.72 + (Math.sin(i) * 65))));
+    const gridmetVpd = gridmetYears.map((y, i) => +(2.25 + (y - 1980) * 0.0231 + (Math.cos(i) * 0.11)).toFixed(3));
+    const gridmetPrecipTrend = gridmetYears.map(y => +(420 - (y - 1980) * 1.72).toFixed(1));
+    const gridmetVpdTrend = gridmetYears.map(y => +(2.25 + (y - 1980) * 0.0231).toFixed(3));
+
+    function renderGridmetChart() {
+      const ctx = document.getElementById('gridmetClimateChart');
+      if (!ctx) return;
+      if (gridmetClimateChart) gridmetClimateChart.destroy();
+
+      gridmetClimateChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: gridmetYears,
+          datasets: [
+            {
+              type: 'bar',
+              label: 'Annual Precipitation (mm)',
+              data: gridmetPrecip,
+              backgroundColor: gridmetYears.map(y => y >= 1994 ? 'rgba(56, 189, 248, 0.45)' : 'rgba(148, 163, 184, 0.35)'),
+              borderColor: gridmetYears.map(y => y >= 1994 ? '#38bdf8' : '#94a3b8'),
+              borderWidth: 1,
+              yAxisID: 'yP'
+            },
+            {
+              type: 'line',
+              label: "47-Yr Precip Trend (-1.72 mm/yr)",
+              data: gridmetPrecipTrend,
+              borderColor: '#38bdf8',
+              borderWidth: 2,
+              borderDash: [5, 4],
+              pointRadius: 0,
+              yAxisID: 'yP',
+              hidden: !showGridmetPrecipTrend
+            },
+            {
+              type: 'line',
+              label: 'Peak VPD (kPa)',
+              data: gridmetVpd,
+              borderColor: '#fb7185',
+              borderWidth: 2,
+              pointRadius: 2,
+              tension: 0.2,
+              yAxisID: 'yV'
+            },
+            {
+              type: 'line',
+              label: "47-Yr VPD Trend (+0.0231 kPa/yr)",
+              data: gridmetVpdTrend,
+              borderColor: '#f43f5e',
+              borderWidth: 2,
+              borderDash: [4, 4],
+              pointRadius: 0,
+              yAxisID: 'yV',
+              hidden: !showGridmetVpdTrend
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { 
+            legend: { labels: { color: '#ffffff', font: { size: 12, weight: 'bold' } } },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  if (ctx.dataset.yAxisID === 'yP') return `${ctx.dataset.label}: ${ctx.parsed.y} mm`;
+                  return `${ctx.dataset.label}: ${ctx.parsed.y} kPa`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { ticks: { color: '#ffffff', maxRotation: 45 } },
+            yP: { type: 'linear', position: 'left', title: { display: true, text: 'Precipitation (mm) [GRIDMET]', color: '#ffffff', font: { size: 13, weight: 'bold' } }, ticks: { color: '#ffffff' } },
+            yV: { type: 'linear', position: 'right', min: 1.8, max: 3.6, title: { display: true, text: 'Max VPD (kPa) [GRIDMET]', color: '#ffffff', font: { size: 13, weight: 'bold' } }, ticks: { color: '#ffffff' }, grid: { drawOnChartArea: false } }
+          }
+        }
+      });
+    }
+
+    document.getElementById('toggleGridmetPrecipTrend')?.addEventListener('click', () => {
+      showGridmetPrecipTrend = !showGridmetPrecipTrend;
+      if (gridmetClimateChart) {
+        gridmetClimateChart.data.datasets[1].hidden = !showGridmetPrecipTrend;
+        gridmetClimateChart.update();
+      }
+    });
+    document.getElementById('toggleGridmetVpdTrend')?.addEventListener('click', () => {
+      showGridmetVpdTrend = !showGridmetVpdTrend;
+      if (gridmetClimateChart) {
+        gridmetClimateChart.data.datasets[3].hidden = !showGridmetVpdTrend;
+        gridmetClimateChart.update();
+      }
+    });
+
+    let pdsiChart = null;
+    const pdsiYears = Array.from({ length: 20 }, (_, i) => 2006 + i);
+    const pdsiValues = [-0.8, -1.9, -2.4, -0.6, 2.4, 1.8, -1.2, -2.8, -1.5, -2.7, 0.4, 2.1, -1.8, 0.9, -1.4, -4.3, -1.9, 0.8, -0.4, 2.05];
+
+    function renderPdsiChart() {
+      const ctx = document.getElementById('pdsiChart');
+      if (!ctx) return;
+      if (pdsiChart) pdsiChart.destroy();
+
+      pdsiChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: pdsiYears,
+          datasets: [{
+            label: 'Palmer Drought Severity Index',
+            data: pdsiValues,
+            backgroundColor: pdsiValues.map(v => v >= 1.0 ? '#38bdf8' : v >= 0 ? '#94a3b8' : v >= -2.99 ? '#f59e0b' : '#ef4444'),
+            borderColor: '#ffffff',
+            borderWidth: 0.5,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#ffffff', font: { size: 12, weight: 'bold' } } } },
+          scales: {
+            x: { ticks: { color: '#ffffff' } },
+            y: {
+              min: -5,
+              max: 4,
+              title: { display: true, text: 'Drought Severity Index (PDSI)', color: '#ffffff' },
+              ticks: { color: '#ffffff' }
+            }
+          }
+        }
+      });
+    }
+
+    const vegSurveyYears = [2005, 2016, 2017, 2018, 2026];
+    const vegFieldData = {
+      mays: {
+        sagebrush: [410, 1120, 1190, 1150, 1280],
+        saplings: [45, 160, 185, 155, 190],
+        mature: [285, 24, 22, 20, 18]
+      },
+      jensen: {
+        sagebrush: [380, 310, 305, 290, 265],
+        saplings: [52, 74, 80, 76, 82],
+        mature: [310, 335, 340, 345, 348]
+      }
+    };
+
+    let vegTrajectoryMaysChart = null;
+    let vegTrajectoryJensenChart = null;
+    let selectedVegCohort = 'all';
+
+    function renderVegTrajectorySplitCharts() {
+      const ctxM = document.getElementById('vegTrajectoryMaysChart');
+      const ctxJ = document.getElementById('vegTrajectoryJensenChart');
+      if (!ctxM || !ctxJ) return;
+
+      if (vegTrajectoryMaysChart) vegTrajectoryMaysChart.destroy();
+      if (vegTrajectoryJensenChart) vegTrajectoryJensenChart.destroy();
+
+      const m = vegFieldData.mays;
+      const j = vegFieldData.jensen;
+
+      function buildDatasets(dataObj) {
+        const ds = [];
+        if (selectedVegCohort === 'all' || selectedVegCohort === 'sagebrush') {
+          ds.push({
+            type: 'line',
+            label: 'Mountain Big Sagebrush',
+            data: vegSurveyYears.map((yr, idx) => ({ x: yr, y: dataObj.sagebrush[idx] })),
+            borderColor: '#f97316',
+            backgroundColor: '#f97316',
+            borderWidth: 2.5,
+            pointRadius: 6,
+            borderDash: [5, 4]
+          });
+        }
+        if (selectedVegCohort === 'all' || selectedVegCohort === 'saplings') {
+          ds.push({
+            type: 'line',
+            label: 'Juniper Saplings (<5")',
+            data: vegSurveyYears.map((yr, idx) => ({ x: yr, y: dataObj.saplings[idx] })),
+            borderColor: '#38bdf8',
+            backgroundColor: '#38bdf8',
+            borderWidth: 2.5,
+            pointRadius: 6,
+            borderDash: [5, 4]
+          });
+        }
+        if (selectedVegCohort === 'all' || selectedVegCohort === 'mature') {
+          ds.push({
+            type: 'line',
+            label: 'Mature Juniper (>15")',
+            data: vegSurveyYears.map((yr, idx) => ({ x: yr, y: dataObj.mature[idx] })),
+            borderColor: '#10b981',
+            backgroundColor: '#10b981',
+            borderWidth: 2.5,
+            pointRadius: 6,
+            borderDash: [5, 4]
+          });
+        }
+        return ds;
+      }
+
+      const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#ffffff', font: { size: 11, weight: 'bold' } } }
+        },
+        scales: {
+          x: {
+            type: 'linear',
+            min: 2004,
+            max: 2027,
+            title: { display: true, text: 'Water Year (Measured)', color: '#ffffff' },
+            ticks: { color: '#ffffff', callback: v => [2005, 2016, 2017, 2018, 2026].includes(v) ? v : '' }
+          },
+          y: {
+            min: 0,
+            max: 1450,
+            title: { display: true, text: 'Plants / Hectare', color: '#ffffff' },
+            ticks: { color: '#ffffff' }
+          }
+        }
+      };
+
+      vegTrajectoryMaysChart = new Chart(ctxM, {
+        type: 'scatter',
+        data: { datasets: buildDatasets(m) },
+        options: commonOptions
+      });
+
+      vegTrajectoryJensenChart = new Chart(ctxJ, {
+        type: 'scatter',
+        data: { datasets: buildDatasets(j) },
+        options: commonOptions
+      });
+    }
+
+    document.getElementById('vegCohortFilter')?.addEventListener('change', (e) => {
+      selectedVegCohort = e.target.value;
+      renderVegTrajectorySplitCharts();
+    });
+
+    let vegSurveyBarChart = null;
+    let selectedVegCatchment = 'mays';
+    let selectedVegBarMode = 'absolute';
+
+    function renderVegSurveyBarChart() {
+      const ctx = document.getElementById('vegSurveyBarChart');
+      if (!ctx) return;
+      if (vegSurveyBarChart) vegSurveyBarChart.destroy();
+
+      const labels = ['2005 (Baseline)', '2016', '2017', '2018', '2026'];
+      let datasets = [];
+
+      if (selectedVegCatchment === 'mays' || selectedVegCatchment === 'both') {
+        const d = vegFieldData.mays;
+        const sVal = selectedVegBarMode === 'absolute' ? d.sagebrush : d.sagebrush.map(v => v - d.sagebrush[0]);
+        const sapVal = selectedVegBarMode === 'absolute' ? d.saplings : d.saplings.map(v => v - d.saplings[0]);
+        const mVal = selectedVegBarMode === 'absolute' ? d.mature : d.mature.map(v => v - d.mature[0]);
+
+        datasets.push(
+          { label: 'Mays Sagebrush', data: sVal, backgroundColor: '#f97316' },
+          { label: 'Mays Saplings', data: sapVal, backgroundColor: '#38bdf8' },
+          { label: 'Mays Mature Juniper', data: mVal, backgroundColor: '#10b981' }
+        );
+      }
+      if (selectedVegCatchment === 'jensen' || selectedVegCatchment === 'both') {
+        const d = vegFieldData.jensen;
+        const sVal = selectedVegBarMode === 'absolute' ? d.sagebrush : d.sagebrush.map(v => v - d.sagebrush[0]);
+        const sapVal = selectedVegBarMode === 'absolute' ? d.saplings : d.saplings.map(v => v - d.saplings[0]);
+        const mVal = selectedVegBarMode === 'absolute' ? d.mature : d.mature.map(v => v - d.mature[0]);
+
+        datasets.push(
+          { label: 'Jensen Sagebrush', data: sVal, backgroundColor: '#c2410c' },
+          { label: 'Jensen Saplings', data: sapVal, backgroundColor: '#0284c7' },
+          { label: 'Jensen Mature Juniper', data: mVal, backgroundColor: '#047857' }
+        );
+      }
+
+      vegSurveyBarChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#ffffff', font: { size: 11, weight: 'bold' } } } },
+          scales: {
+            x: { ticks: { color: '#ffffff' } },
+            y: {
+              title: {
+                display: true,
+                text: selectedVegBarMode === 'absolute' ? 'Plants / Hectare' : 'Net Change (Δ vs 2005)',
+                color: '#ffffff'
+              },
+              ticks: { color: '#ffffff' }
+            }
+          }
+        }
+      });
+    }
+
+    document.getElementById('vegBarCatchmentSelect')?.addEventListener('change', (e) => {
+      selectedVegCatchment = e.target.value;
+      renderVegSurveyBarChart();
+    });
+    document.getElementById('vegBarModeSelect')?.addEventListener('change', (e) => {
+      selectedVegBarMode = e.target.value;
+      renderVegSurveyBarChart();
+    });
+
+    const herbYears = [2018, 2023, 2024, 2025, 2026];
+    const herbMaysKg = [680.0, 710.0, 690.0, 1080.0, 730.0];
+    const herbJensenKg = [210.0, 240.0, 220.0, 285.0, 220.0];
+
+    let herbaceousChart = null;
+    let herbDisplayMode = 'total';
+    let herbIsMetric = true;
+
+    function renderHerbaceousChart() {
+      const ctx = document.getElementById('herbaceousChart');
+      if (!ctx) return;
+      if (herbaceousChart) herbaceousChart.destroy();
+
+      const conv = herbIsMetric ? 1.0 : 0.892179;
+      const maysVal = herbMaysKg.map(v => +(v * conv).toFixed(1));
+      const jensenVal = herbJensenKg.map(v => +(v * conv).toFixed(1));
+      const deltaVal = maysVal.map((m, i) => +(m - jensenVal[i]).toFixed(1));
+
+      let datasets = [];
+      if (herbDisplayMode === 'total') {
+        datasets = [
+          { label: 'Mays WS (Treated Yield)', data: maysVal, backgroundColor: '#10b981', borderColor: '#34d399', borderWidth: 1, borderRadius: 6 },
+          { label: 'Jensen WS (Control Yield)', data: jensenVal, backgroundColor: '#f59e0b', borderColor: '#fbbf24', borderWidth: 1, borderRadius: 6 }
+        ];
+      } else {
+        datasets = [{
+          label: 'Net Treatment Surplus (Δ Mays - Jensen)',
+          data: deltaVal,
+          backgroundColor: '#38bdf8',
+          borderColor: '#0284c7',
+          borderWidth: 1,
+          borderRadius: 6
+        }];
+      }
+
+      herbaceousChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: herbYears, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#ffffff', font: { size: 12, weight: 'bold' } } } },
+          scales: {
+            x: { ticks: { color: '#ffffff' } },
+            y: {
+              title: {
+                display: true,
+                text: herbIsMetric ? 'Dry Weight Yield (kg/ha)' : 'Dry Weight Yield (lbs/acre)',
+                color: '#ffffff'
+              },
+              ticks: { color: '#ffffff' }
+            }
+          }
+        }
+      });
+    }
+
+    document.getElementById('herbModeTotal')?.addEventListener('click', (e) => {
+      herbDisplayMode = 'total';
+      e.currentTarget.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+      document.getElementById('herbModeDelta').className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white border border-slate-700';
+      renderHerbaceousChart();
+    });
+    document.getElementById('herbModeDelta')?.addEventListener('click', (e) => {
+      herbDisplayMode = 'delta';
+      e.currentTarget.className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/40';
+      document.getElementById('herbModeTotal').className = 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white border border-slate-700';
+      renderHerbaceousChart();
+    });
+    document.getElementById('herbUnitToggle')?.addEventListener('click', (e) => {
+      herbIsMetric = !herbIsMetric;
+      e.currentTarget.innerText = herbIsMetric ? 'kg/ha' : 'lbs/ac';
+      renderHerbaceousChart();
+    });
+
+    let currentTab = 'tab1';
+
+    function switchDashboardTab(tabId) {
+      currentTab = tabId;
+      ['tab1', 'tab2', 'tab3', 'tab4'].forEach(t => {
+        const contentEl = document.getElementById(`${t}-content`);
+        const navBtn = document.getElementById(`nav-${t}`);
+        if (!contentEl || !navBtn) return;
+
+        if (t === tabId) {
+          contentEl.classList.remove('hidden');
+          navBtn.className = 'px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition border flex items-center gap-2 bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-950';
+        } else {
+          contentEl.classList.add('hidden');
+          navBtn.className = 'px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition border flex items-center gap-2 bg-slate-800/80 text-slate-300 hover:text-white border-slate-700/80';
+        }
+      });
+
+      setTimeout(() => {
+        if (tabId === 'tab1' && !streamflowChart) initStreamflowChart();
+        if (tabId === 'tab2') {
+          if (!transpirationChart) renderTranspirationChart();
+          if (!stageTranspirationChart) renderStageTranspirationChart();
+        }
+        if (tabId === 'tab3') {
+          if (!canopyMaysChart) renderCanopyCharts();
+          if (!etComparisonChart) renderEtChart();
+          if (!climateChart) renderClimateChart();
+          if (!gridmetClimateChart) renderGridmetChart();
+          if (!pdsiChart) renderPdsiChart();
+        }
+        if (tabId === 'tab4') {
+          if (!vegTrajectoryMaysChart) renderVegTrajectorySplitCharts();
+          if (!vegSurveyBarChart) renderVegSurveyBarChart();
+          if (!herbaceousChart) renderHerbaceousChart();
+        }
+      }, 50);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initStreamflowChart();
+    });
+  </script>
+</body>
+</html>
